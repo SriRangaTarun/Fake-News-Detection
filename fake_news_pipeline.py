@@ -41,6 +41,9 @@ warnings.filterwarnings('ignore')
 
 # Define path for loading data and load train/val datasets
 
+parser = argparse.ArgumentParser()
+parser.add_argument('glove_path')
+args = parser.parse_args(); glove_path = args.glove_path
 path = "https://www.dropbox.com/s/2pj07qip0ei09xt/inspirit_fake_news_resources.zip?dl=1"
 
 r = requests.get(path)
@@ -52,6 +55,7 @@ with open(os.path.join(basepath, 'train_val_data.pkl'), 'rb') as f:
     
 # Define helper functions to calculate tag, extension, headline, and magic features
   
+# Get tag features
 def prepare_tag_features(data):
     vectorizer = CountVectorizer()
   
@@ -66,7 +70,8 @@ def prepare_tag_features(data):
     scaler.fit(tag_counts)
     tag_counts = scaler.transform(tag_counts)
     return tag_counts
-  
+
+# Get visible tags on page
 def tag_visible(element):
     if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
         return False
@@ -74,13 +79,14 @@ def tag_visible(element):
         return False
     return True
 
+# Get visible text from HTML
 def text_from_html(body):
     soup = bs(body, 'html.parser')
     texts = soup.findAll(text=True)
     visible_texts = filter(tag_visible, texts)  
     return u" ".join(t.strip() for t in visible_texts)
     
-
+# Get binarykeyword features
 def prepare_keyword_features(data):
     keywords = ['support', 'day','because','in',\
                 'but','will','work','jew','proven','house','people','state','percent',\
@@ -105,25 +111,27 @@ def prepare_keyword_features(data):
     scaler.fit(keyword_features)
     keyword_features = scaler.transform(keyword_features)
     return keyword_features
-  
-  def load_glove(word_index):
-      EMBEDDING_FILE = embedding_path
-      def get_coefs(word,*arr): return word, np.asarray(arr, dtype='float32')[:100]
-      embeddings_index = dict(get_coefs(*o.split(" ")) for o in open(EMBEDDING_FILE))
-    
-      all_embs = np.stack(embeddings_index.values())
-      emb_mean,emb_std = -0.005838499,0.48782197
-      embed_size = all_embs.shape[1]
 
-      nb_words = min(200000, len(word_index))
-      embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
-      for word, i in tqdm_notebook(word_index.items()):
-          if i >= 200000: continue
-          embedding_vector = embeddings_index.get(word)
-          if embedding_vector is not None: embedding_matrix[i-1] = embedding_vector
-            
-      return embedding_matrix
+# Load GloVe embeddings
+def load_glove(word_index):
+    EMBEDDING_FILE = glove_path
+    def get_coefs(word,*arr): return word, np.asarray(arr, dtype='float32')[:100]
+    embeddings_index = dict(get_coefs(*o.split(" ")) for o in open(EMBEDDING_FILE))
     
+    all_embs = np.stack(embeddings_index.values())
+    emb_mean,emb_std = -0.005838499,0.48782197
+    embed_size = all_embs.shape[1]
+
+    nb_words = min(200000, len(word_index))
+    embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
+    for word, i in tqdm_notebook(word_index.items()):
+        if i >= 200000: continue
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None: embedding_matrix[i-1] = embedding_vector
+            
+    return embedding_matrix
+
+# Prepare text data with tokenizer
 def prepare_text_data(data, new_tokenizer=None):
     text_data = []
     for data_point in tqdm_notebook(data):
@@ -141,6 +149,7 @@ def prepare_text_data(data, new_tokenizer=None):
     text_data = pad_sequences(text_data, maxlen=128)
     return tokenizer.word_index, tokenizer, text_data
 
+# Get extension features
 def prepare_extension_data(data):
     extension_data = []
   
@@ -157,7 +166,8 @@ def prepare_extension_data(data):
       extension_data.append(extension_list)
     
     return np.array(extension_data)
-  
+
+# Get magic keyword features
 def prepare_magic_features(data):
     magic_features = []
     shady_chars = ['$', '!', ',', '%', '~', '*', '&', '^', '#', ')', '(', '@']
@@ -182,6 +192,7 @@ def prepare_magic_features(data):
     scaler.fit(magic_features)
     return scaler.transform(magic_features)
 
+# Get article descrption from HTML
 def get_description_from_html(html):
     soup = bs(html)
     description_tag = soup.find('meta', attrs={'name':'og:description'})
@@ -193,6 +204,7 @@ def get_description_from_html(html):
       description = ''
     return description
 
+# Scrape description from website
 def scrape_description(url):
     if not url.startswith('http'):
         url = 'http://' + url
@@ -204,7 +216,8 @@ def scrape_description(url):
         description = 'the'
 
     return description
-  
+
+# Get description tokens using tokenizer
 def prepare_description_data(data, tokenizer=None):
     text_data = []
   
@@ -216,7 +229,6 @@ def prepare_description_data(data, tokenizer=None):
     return text_data
 
 # Define final function to generate all training and validation features
-
 def prepare_data():
     train_tag_data = prepare_tag_features(train_data)
     val_tag_data = prepare_tag_features(val_data)
