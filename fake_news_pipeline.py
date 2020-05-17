@@ -75,9 +75,11 @@ def text_from_html(body):
     
 
 def prepare_keyword_features(data):
-    keywords = ['support', 'day','because','in','but','will','work','jew','proven','house','people','state','percent',\
-                'sanders','Nazi','share','said', 'Obama', 'Trump', 'h1', 'h2', 'title','h3','kill','die','offcial','election',\
-                'elections', 'government','!','/', 'secret','controversial','confidential', 'censor','censored','posted','html','<','claims','>']
+    keywords = ['support', 'day','because','in',\
+                'but','will','work','jew','proven','house','people','state','percent',\
+                'sanders','Nazi','share','said', 'Obama', 'Trump', 'h1', 'h2', 'title','h3',
+                'kill','die','offcial','election', 'elections', 'government','!','/', 'secret',\
+                'controversial','confidential', 'censor','censored','posted','html','<','claims','>']
   
     keyword_features = []
   
