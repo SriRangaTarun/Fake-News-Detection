@@ -177,7 +177,9 @@ def prepare_magic_features(data):
 
 def get_description_from_html(html):
     soup = bs(html)
-    description_tag = soup.find('meta', attrs={'name':'og:description'}) or soup.find('meta', attrs={'property':'description'}) or soup.find('meta', attrs={'name':'description'})
+    description_tag = soup.find('meta', attrs={'name':'og:description'})
+    description_tag = description_tag or soup.find('meta', attrs={'name':'description'})
+    description_tag = description_tag or soup.find('meta', attrs={'property':'description'})
     if description_tag:
       description = description_tag.get('content') or ''
     else:
@@ -266,8 +268,10 @@ def neural_model():
     return model
   
 model = neural_model()
-model.fit(x=[train_text_data, train_description_data, train_extension_data, train_keyword_features, train_magic_features], y=train_targets,\
-             validation_data=([val_text_data, val_description_data, val_extension_data, val_keyword_features, val_magic_features], val_targets),
+model.fit(x=[train_text_data, train_description_data, train_extension_data,\
+             train_keyword_features, train_magic_features], y=train_targets,\
+             validation_data=([val_text_data, val_description_data,\
+                               val_extension_data, val_keyword_features, val_magic_features], val_targets),
              epochs=20, batch_size=256)
             
 model_json = model.to_json()
