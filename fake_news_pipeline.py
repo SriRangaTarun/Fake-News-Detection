@@ -38,6 +38,9 @@ from keras.preprocessing.sequence import pad_sequences
 
 import warnings
 warnings.filterwarnings('ignore')
+
+# Define path for loading data and load train/val datasets
+
 path = "https://www.dropbox.com/s/2pj07qip0ei09xt/inspirit_fake_news_resources.zip?dl=1"
 
 r = requests.get(path)
@@ -46,6 +49,8 @@ z = zipfile.ZipFile(c); z.extractall(); basepath = '.'
 
 with open(os.path.join(basepath, 'train_val_data.pkl'), 'rb') as f:
     train_data, val_data = pickle.load(f)
+    
+# Define helper functions to calculate tag, extension, headline, and magic features
   
 def prepare_tag_features(data):
     vectorizer = CountVectorizer()
@@ -209,7 +214,9 @@ def prepare_description_data(data, tokenizer=None):
     text_data = tokenizer.texts_to_sequences(text_data)
     text_data = pad_sequences(text_data, maxlen=20)
     return text_data
-  
+
+# Define final function to generate all training and validation features
+
 def prepare_data():
     train_tag_data = prepare_tag_features(train_data)
     val_tag_data = prepare_tag_features(val_data)
@@ -243,7 +250,9 @@ def prepare_data():
   
 val_targets = np.array([data_point[2] for data_point in val_data]).reshape((len(val_data), 1))
 train_targets = np.array([data_point[2] for data_point in train_data]).reshape((len(train_data), 1))
-  
+
+# Create neural network model to classify articles as fake or real
+
 def neural_model():
     input_text = Input(shape=(128,), name='Text')
     input_description = Input(shape=(20,), name='Description')
@@ -268,6 +277,8 @@ def neural_model():
     model = Model(inputs=[input_text, input_description, input_extension, input_keywords, input_magic], outputs=outputs)
     model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['acc'])
     return model
+
+# Fit model on 20 epochs and batch size 256
   
 model = neural_model()
 model.fit(x=[train_text_data, train_description_data, train_extension_data,\
@@ -275,7 +286,9 @@ model.fit(x=[train_text_data, train_description_data, train_extension_data,\
              validation_data=([val_text_data, val_description_data,\
                                val_extension_data, val_keyword_features, val_magic_features], val_targets),
              epochs=20, batch_size=256)
-            
+
+# Save model and tokenizer vocabulary for future use
+
 model_json = model.to_json()
 
 with open("model.json", "w") as json_file:
